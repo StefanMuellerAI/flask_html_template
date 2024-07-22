@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md overflow-y-auto h-[800px]">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-200">{{ labels.requirements.title }}</h2>
+        <form id="inputForm">
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-2">{{ labels.requirements.text_length.label }}</h3>
+                <div class="space-y-2">
+                    <label class="inline-flex items-center">
+                        <input type="radio" class="form-radio" name="text_length" value="short">
+                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.text_length.short }}</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" class="form-radio" name="text_length" value="medium" checked>
+                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.text_length.medium }}</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" class="form-radio" name="text_length" value="long">
+                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.text_length.long }}</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-2">{{ labels.requirements.tone.label }}</h3>
+                <div class="space-y-2">
+                    <label class="inline-flex items-center">
+                        <input type="radio" class="form-radio" name="tone" value="professional" checked>
+                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.tone.professional }}</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" class="form-radio" name="tone" value="binding">
+                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.tone.binding }}</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" class="form-radio" name="tone" value="casual">
+                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.tone.casual }}</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-2">{{ labels.requirements.text_basis.label }}</h3>
+                <select id="collection_name" name="collection_name" class="w-full p-2 border rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700">
+                    <option value="">{{ labels.requirements.text_basis.placeholder }}</option>
+                    {% for collection in collections %}
+                        <option value="{{ collection.name }}">{{ collection.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-2">{{ labels.requirements.system_prompt.label }}</h3>
+                <select id="system_prompt_id" name="system_prompt_id" class="w-full p-2 border rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700">
+                    {% for prompt in system_prompts %}
+                        <option value="{{ prompt.id }}">{{ prompt.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-2">{{ labels.requirements.prompt.label }}</h3>
+                <textarea id="prompt" name="prompt" rows="4" class="w-full p-2 border rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700" placeholder="{{ labels.requirements.prompt.placeholder }}"></textarea>
+            </div>
+
+            <button id="generateButton" type="submit" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                {{ labels.requirements.generate_button }}
+            </button>
+        </form>
+    </div>
+
+<!-- Zweite Spalte: Generierter Text und Quellen -->
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md flex flex-col h-[800px]">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-200">{{ labels.bidder_text.title }}</h2>
+        <div class="flex-grow flex flex-col overflow-y-auto relative">
+            <div id="outputContainer" class="flex-grow border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4">
+                <div id="output" class="h-full overflow-y-auto text-gray-800 dark:text-gray-200">
+                    {% if generated_text %}
+                        {{ generated_text }}
+                    {% else %}
+                        {{ labels.bidder_text.placeholder }}
+                    {% endif %}
+                </div>
+                <div id="spinner" class="hidden absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-75 dark:bg-opacity-75">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+                </div>
+            </div>
+        </div>
+        <div id="copyButtonContainer" class="mb-4 {% if not generated_text %}hidden{% endif %}">
+            <button id="copyButton" class="copy-button flex items-center justify-center w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                {{ labels.bidder_text.copy_button }}
+            </button>
+        </div>
+        <div class="mt-4">
+            <button id="toggleSources" class="w-full text-left px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-t-lg focus:outline-none">
+                <span class="font-bold">{{ labels.sources.title }}</span>
+                <svg class="float-right h-5 w-5 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            <div id="sourcesContent" class="hidden border border-gray-300 dark:border-gray-600 rounded-b-lg p-4 bg-white dark:bg-gray-800">
+                <div id="citationsContainer" style="word-wrap: break-word; overflow-wrap: anywhere;">
+                    {% for citation in citations %}
+                        <p>{{ citation }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dritte Spalte: Fragen Verlauf -->
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md flex flex-col h-[800px]">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-200">{{ labels.history.title }}</h2>
+        <div id="chatHistory" class="flex-grow overflow-y-auto">
+            {% for conversation in conversations %}
+                <div class="mb-4 p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition duration-300 ease-in-out" onclick="openModal({{ loop.index0 }})">
+                    <strong>{{ labels.history.requirement }}</strong> <span class="text-gray-600 dark:text-gray-400">{{ conversation.input[:50] }}...</span><br>
+                    <strong>{{ labels.history.bidder_text }}</strong> <span class="text-gray-600 dark:text-gray-400">{{ conversation.output[:50] }}...</span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal für Fragen Verlauf -->
+<div id="chatModal" class="fixed inset-0 bg-gray-600 dark:bg-gray-900 bg-opacity-50 dark:bg-opacity-80 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-8 border border-gray-300 dark:border-gray-600 w-11/12 md:w-3/4 shadow-lg rounded-lg bg-white dark:bg-gray-800 max-h-[80vh] flex flex-col">
+        <h3 id="modalTitle" class="text-2xl leading-6 font-bold text-gray-900 dark:text-gray-100 mb-6">{{ labels.modal.title }}</h3>
+        <div id="modalContent" class="overflow-y-auto flex-grow text-gray-800 dark:text-gray-200"></div>
+        <div class="mt-6 flex justify-between items-center">
+            <button id="modalCopyButton" class="copy-button bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                {{ labels.modal.copy_button }}
+            </button>
+            <button id="closeModal" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                {{ labels.modal.close_button }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Script-Tag für Konversationsdaten -->
+<script id="conversations-data" type="application/json">
+    {{ conversations|tojson|safe }}
+</script>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+{% endblock %}

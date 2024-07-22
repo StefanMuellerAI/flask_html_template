@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div class="max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 m-4">
+        <div class="text-center">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                {{ labels.maintenance.title }}
+            </h1>
+            <div class="text-5xl text-primary-500 mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-24 h-24 inline-block">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+            </div>
+            <p class="text-xl text-gray-700 dark:text-gray-300 mb-8">
+                {{ labels.maintenance.message }}
+            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                {{ labels.maintenance.apology }}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

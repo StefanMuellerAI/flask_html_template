@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ labels.base.title }}{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{{ labels.base.favicon.path }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { "50": "#eff6ff", "100": "#dbeafe", "200": "#bfdbfe", "300": "#93c5fd", "400": "#60a5fa", "500": "#3b82f6", "600": "#2563eb", "700": "#1d4ed8", "800": "#1e40af", "900": "#1e3a8a", "950": "#172554" }
+                    },
+                    screens: {
+                        'xs': '475px',
+                        '3xl': '1600px',
+                    }
+                },
+                fontFamily: {
+                    'body': [
+                        'Inter',
+                        'ui-sans-serif',
+                        'system-ui',
+                        '-apple-system',
+                        'system-ui',
+                        'Segoe UI',
+                        'Roboto',
+                        'Helvetica Neue',
+                        'Arial',
+                        'Noto Sans',
+                        'sans-serif',
+                        'Apple Color Emoji',
+                        'Segoe UI Emoji',
+                        'Segoe UI Symbol',
+                        'Noto Color Emoji'
+                    ],
+                    'sans': [
+                        'Inter',
+                        'ui-sans-serif',
+                        'system-ui',
+                        '-apple-system',
+                        'system-ui',
+                        'Segoe UI',
+                        'Roboto',
+                        'Helvetica Neue',
+                        'Arial',
+                        'Noto Sans',
+                        'sans-serif',
+                        'Apple Color Emoji',
+                        'Segoe UI Emoji',
+                        'Segoe UI Symbol',
+                        'Noto Color Emoji'
+                    ]
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        /* Übergangsanimationen */
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+        }
+
+        /* Tooltip Styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-all">
+    <header class="bg-white dark:bg-gray-800 shadow-md">
+        <nav class="container mx-auto px-6 py-3">
+            <div class="flex flex-col xs:flex-row justify-between items-center">
+                <div class="flex items-center mb-4 xs:mb-0">
+                    <img src="{{ labels.base.logo.path }}" alt="{{ labels.base.logo.alt }}" class="h-8 w-8 mr-2">
+                    <h1 class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ labels.base.title }}</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {% if current_user.is_authenticated %}
+                        {% if request.endpoint == 'dashboard' %}
+                            <a href="{{ url_for('index') }}" class="tooltip text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-all">
+                                {{ labels.nav.back_to_main }}
+                                <span class="tooltiptext">Return to main page</span>
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('dashboard') }}" class="tooltip text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-all">
+                                {{ labels.nav.dashboard }}
+                                <span class="tooltiptext">Go to dashboard</span>
+                            </a>
+                        {% endif %}
+                        <a href="{{ url_for('logout') }}" class="tooltip bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-all">
+                            {{ labels.nav.logout }}
+                            <span class="tooltiptext">Log out of your account</span>
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="tooltip bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2 px-4 rounded-lg transition-all">
+                            {{ labels.nav.login }}
+                            <span class="tooltiptext">Log in to your account</span>
+                        </a>
+                    {% endif %}
+                    <button id="darkModeToggle" class="tooltip p-2 rounded-full bg-gray-200 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-400 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-800 dark:text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                        <span class="tooltiptext">Toggle dark mode</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto mt-8 px-6">
+        {% block content %}{% endblock %}
+    </main>
+     <footer class="bg-white dark:bg-gray-800 shadow-md mt-8">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-center items-center">
+                <a href="https://stefanai.de" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-all">
+                    &copy; {{ current_year }} stefanai.de
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+
+    <script>
+        // Funktion zum Umschalten des Darkmodes
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+        }
+
+        // Darkmode-Status aus dem localStorage abrufen
+        const darkModeEnabled = localStorage.getItem('darkMode') === 'true';
+
+        // Darkmode beim Laden der Seite anwenden, wenn er aktiviert war
+        if (darkModeEnabled) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // Event-Listener für den Darkmode-Toggle-Button
+        document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const currentYear = new Date().getFullYear();
+            document.querySelector('footer a').innerHTML = `&copy; ${currentYear} stefanai.de`;
+        });
+
+        // Smooth Scroll für interne Links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
