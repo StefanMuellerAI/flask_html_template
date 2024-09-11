@@ -19,22 +19,28 @@ document.addEventListener('DOMContentLoaded', function() {
         systemPromptName: document.getElementById('systemPromptName'),
         systemPromptContent: document.getElementById('systemPromptContent'),
         saveSystemPromptButton: document.getElementById('saveSystemPrompt'),
-        closeSystemPromptModalButton: document.getElementById('closeSystemPromptModal')
+        closeSystemPromptModalButton: document.getElementById('closeSystemPromptModal'),
+        sharepointForm: document.getElementById('sharepointForm'),
+        sharepointMessage: document.getElementById('sharepointMessage'),
+        sharepointSpinner: document.getElementById('sharepointSpinner')
     };
 
     let currentPromptId = null;
 
     // Helper Functions
-    function showSpinner() {
-        if (elements.spinner) elements.spinner.classList.remove('hidden');
+    function showSpinner(spinner) {
+        if (spinner) spinner.classList.remove('hidden');
     }
 
-    function hideSpinner() {
-        if (elements.spinner) elements.spinner.classList.add('hidden');
+    function hideSpinner(spinner) {
+        if (spinner) spinner.classList.add('hidden');
     }
 
-    function showMessage(message) {
-        if (elements.messageDiv) elements.messageDiv.textContent = message;
+    function showMessage(messageDiv, message, type) {
+        if (messageDiv) {
+            messageDiv.textContent = message;
+            messageDiv.className = `mt-4 text-sm ${type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`;
+        }
     }
 
     // Main Functions
@@ -182,8 +188,8 @@ loadMaintenanceStatus();
             e.preventDefault();
             const formData = new FormData(this);
 
-            showSpinner();
-            showMessage('');
+            showSpinner(elements.spinner);
+            showMessage(elements.messageDiv, '', '');
 
             fetch('/create_collection', {
                 method: 'POST',
@@ -196,15 +202,15 @@ loadMaintenanceStatus();
                 return response.json();
             })
             .then(data => {
-                hideSpinner();
-                showMessage(data.message);
+                hideSpinner(elements.spinner);
+                showMessage(elements.messageDiv, data.message, 'success');
                 elements.collectionForm.reset();
                 loadExistingCollections();
             })
             .catch(error => {
-                hideSpinner();
+                hideSpinner(elements.spinner);
                 console.error('Error:', error);
-                showMessage('An error occurred. Please try again.');
+                showMessage(elements.messageDiv, 'An error occurred. Please try again.', 'error');
             });
         });
     }
@@ -322,4 +328,40 @@ loadMaintenanceStatus();
     // Initial load
     loadExistingCollections();
     loadSystemPrompts();
+
+    // New function for SharePoint import
+    function importFromSharepoint(url, textBasisName) {
+        showSpinner(elements.sharepointSpinner);
+        fetch('/import_from_sharepoint', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url: url, textBasisName: textBasisName }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideSpinner(elements.sharepointSpinner);
+            if (data.error) {
+                showMessage(elements.sharepointMessage, data.error, 'error');
+            } else {
+                showMessage(elements.sharepointMessage, data.message, 'success');
+                loadExistingCollections();
+            }
+        })
+        .catch(error => {
+            hideSpinner(elements.sharepointSpinner);
+            showMessage(elements.sharepointMessage, 'Ein Fehler ist aufgetreten: ' + error, 'error');
+        });
+    }
+
+    // Event Listener for SharePoint form
+    if (elements.sharepointForm) {
+        elements.sharepointForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const url = document.getElementById('sharepointUrl').value;
+            const textBasisName = document.getElementById('sharepointTextBasisName').value;
+            importFromSharepoint(url, textBasisName);
+        });
+    }
 });

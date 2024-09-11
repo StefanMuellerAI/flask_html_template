@@ -12,29 +12,30 @@ import os
 import ollama
 import json
 
-
-
-#ollama.pull('llama3-gradient:latest')
-
-# Configure logging
+# Konfiguriere Logging
 logging.basicConfig(level=logging.DEBUG)
 
-
+# Lade Umgebungsvariablen aus .env-Datei
 load_dotenv()
 
+# Initialisiere Flask-App
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
+# Initialisiere Datenbank
 db = SQLAlchemy(app)
 
+# Konfiguriere Login-Manager
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# Definiere erlaubte Dateierweiterungen und Konfigurationsvariablen
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'pdf'}
 
+# Lade Konfigurationsvariablen aus Umgebungsvariablen
 AZURE_EMBEDDING_MODEL = os.getenv("AZURE_EMBEDDING_MODEL")
 AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
 AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT")
@@ -42,12 +43,14 @@ AZURE_MODEL = os.getenv("AZURE_MODEL", "gpt-35-turbo")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3-gradient:latest")
 LABEL_OWNER = os.getenv("LABLE_OWNER", "labels_arvato.json")
 
+# Initialisiere Azure OpenAI Client
 azure_openai_client = AzureOpenAI(
     api_key=AZURE_OPENAI_KEY,
     api_version="2024-02-15-preview",
     azure_endpoint=AZURE_ENDPOINT
 )
 
+# Definiere Datenbankmodelle
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
@@ -79,20 +82,36 @@ class Conversation(db.Model):
     system_prompt = db.relationship('SystemPrompt', backref=db.backref('conversations', lazy=True))
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
+class ChatSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    updated_at = db.Column(db.DateTime(timezone=True), onupdate=func.now())
 
+class ChatMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('chat_session.id'), nullable=False)
+    role = db.Column(db.String(10), nullable=False)  # 'user' oder 'assistant'
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
+
+    session = db.relationship('ChatSession',
+                              backref=db.backref('messages', lazy=True, order_by='ChatMessage.created_at'))
+
+# Initialisiere Wartungsmodus-Variable
 maintenance_mode = False
 
-
+# Füge Labels zum Template-Kontext hinzu
 @app.context_processor
 def inject_labels():
     return dict(labels=load_labels())
 
+# Lade Labels aus JSON-Datei
 def load_labels():
     label_name = "labels_" + os.getenv("LABEL_OWNER", "") + ".json"
     with open(label_name, 'r', encoding='utf-8') as file:
         return json.load(file)
 
-
+# Funktion zur Textgenerierung (Azure oder Ollama)
 def generate_text(service, system_message, user_message):
     if service == 'azure':
         print("Azure")
@@ -115,12 +134,14 @@ def generate_text(service, system_message, user_message):
         ])
         return response['message']['content']
 
+# Route zum Auflisten der System-Prompts
 @app.route('/system_prompts', methods=['GET'])
 @login_required
 def list_system_prompts():
     prompts = SystemPrompt.query.all()
     return jsonify([{'id': p.id, 'name': p.name, 'content': p.content} for p in prompts])
 
+# Route zum Erstellen eines neuen System-Prompts
 @app.route('/system_prompts', methods=['POST'])
 @login_required
 def create_system_prompt():
@@ -130,7 +151,7 @@ def create_system_prompt():
     db.session.commit()
     return jsonify({'id': new_prompt.id, 'name': new_prompt.name, 'content': new_prompt.content}), 201
 
-
+# Route zum Abrufen oder Aktualisieren eines System-Prompts
 @app.route('/system_prompts/<int:prompt_id>', methods=['GET', 'PUT'])
 @login_required
 def system_prompt(prompt_id):
@@ -146,6 +167,7 @@ def system_prompt(prompt_id):
         db.session.commit()
         return jsonify({'id': prompt.id, 'name': prompt.name, 'content': prompt.content})
 
+# Route zum Löschen eines System-Prompts
 @app.route('/system_prompts/<int:prompt_id>', methods=['DELETE'])
 @login_required
 def delete_system_prompt(prompt_id):
@@ -154,8 +176,7 @@ def delete_system_prompt(prompt_id):
     db.session.commit()
     return '', 204
 
-
-
+# Route zum Erstellen einer neuen Kollektion
 @app.route('/create_collection', methods=['POST'])
 @login_required
 def create_collection():
@@ -213,6 +234,7 @@ def create_collection():
         logging.error(f"An error occurred: {e}")
         return jsonify({"error": str(e)}), 500
 
+# Route zum Löschen einer Kollektion
 @app.route('/delete_collection/<collection_name>', methods=['POST'])
 @login_required
 def delete_collection(collection_name):
@@ -222,21 +244,18 @@ def delete_collection(collection_name):
     except Exception as e:
         return jsonify({'message': f'Fehler beim Löschen der Collection: {str(e)}'}), 500
 
+# Lade Benutzer für Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-
+# Route zum Abrufen des Wartungsmodus-Status
 @app.route('/get_maintenance_status')
 @login_required
 def get_maintenance_status():
     return jsonify({'maintenance_mode': maintenance_mode})
 
-
-from flask import jsonify, request, render_template
-import logging
-
-
+# Hauptroute für die Anwendung
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
@@ -249,6 +268,7 @@ def index():
 
     if request.method == 'POST':
         try:
+            # Verarbeite POST-Anfrage für Textgenerierung
             form_data = request.form
             prompt = form_data.get('prompt')
             collection_name = form_data.get('collection_name')
@@ -262,6 +282,7 @@ def index():
             if not collection_name:
                 raise ValueError("No collection selected")
 
+            # Suche relevante Dokumente in der ausgewählten Kollektion
             collection = chroma_client.get_collection(name=collection_name)
             results = collection.query(
                 query_embeddings=[create_embedding(prompt)],
@@ -278,10 +299,12 @@ def index():
 
             user_message = f"Use this context if it's helpful: {context}\n\nNow, respond in german to the following prompt: {prompt}\nKeep the text {length} and stick to this tone of voice for the text: {tone}."
 
+            # Generiere Text basierend auf dem Prompt und Kontext
             generated_text = generate_text(service, system_message, user_message)
 
             logging.info(f"Generated text: {generated_text[:100]}...")  # Log first 100 characters
 
+            # Speichere die Konversation in der Datenbank
             conversation = Conversation(input=prompt, output=generated_text, system_prompt_id=system_prompt_id)
             db.session.add(conversation)
             db.session.commit()
@@ -334,8 +357,6 @@ def toggle_maintenance():
 def maintenance_status():
     return jsonify({'maintenance': maintenance_mode})
 
-
-
 @app.route('/clear_chat_history', methods=['POST'])
 @login_required
 def clear_chat_history():
@@ -346,7 +367,6 @@ def clear_chat_history():
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Fehler beim Löschen des Chatverlaufs: {str(e)}'}), 500
-
 
 @app.route('/list_collections')
 @login_required
@@ -377,7 +397,6 @@ def list_collections():
 
     return jsonify({'collections': collection_data})
 
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -390,19 +409,145 @@ def login():
         flash('Invalid username or password')
     return render_template('login.html')
 
-
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('index'))
 
-
 @app.route('/dashboard')
 @login_required
 def dashboard():
     return render_template('dashboard.html')
 
+@app.route('/create_new_session', methods=['POST'])
+@login_required
+def create_new_session():
+    new_session = ChatSession()
+    db.session.add(new_session)
+    db.session.commit()
+    return jsonify({'session_id': new_session.id})
+
+@app.route('/get_sessions')
+@login_required
+def get_sessions():
+    sessions = ChatSession.query.order_by(ChatSession.created_at.desc()).limit(20).all()
+    return jsonify({
+        'sessions': [{'id': session.id, 'created_at': session.created_at.isoformat()} for session in sessions]
+    })
+
+@app.route('/chat', methods=['GET', 'POST'])
+@login_required
+def chat():
+    labels = load_labels()
+
+    if request.method == 'POST':
+        try:
+            data = request.json
+            message = data.get('message')
+            collection_name = data.get('collection_name')
+            system_prompt_id = data.get('system_prompt_id')
+            session_id = data.get('session_id')
+
+            if not message:
+                raise ValueError("No message provided")
+
+            # Erstellen oder Abrufen einer Chat-Sitzung
+            if not session_id:
+                chat_session = ChatSession()
+                db.session.add(chat_session)
+                db.session.commit()
+                session_id = chat_session.id
+            else:
+                chat_session = ChatSession.query.get(session_id)
+                if not chat_session:
+                    raise ValueError("Invalid session ID")
+
+            # Abrufen der Chathistorie für die aktuelle Session
+            chat_history = ChatMessage.query.filter_by(session_id=session_id).order_by(ChatMessage.created_at).all()
+
+            # Vorbereiten der Chathistorie für die KI
+            messages = []
+            for msg in chat_history:
+                messages.append({"role": msg.role, "content": msg.content})
+
+            # Speichern der Benutzernachricht
+            user_message = ChatMessage(session_id=session_id, role='user', content=message)
+            db.session.add(user_message)
+            messages.append({"role": "user", "content": message})
+
+            if collection_name:
+                collection = chroma_client.get_collection(name=collection_name)
+                results = collection.query(
+                    query_embeddings=[create_embedding(message)],
+                    n_results=5,
+                    include=["documents", "metadatas", "distances"]
+                )
+                context = "\n".join(results["documents"][0])
+                citations = [f"{meta.get('source', 'Unknown')} - S. {meta.get('page_number', 'N/A')}"
+                             for meta in results["metadatas"][0]]
+            else:
+                context = ""
+                citations = []
+
+            if system_prompt_id:
+                selected_system_prompt = SystemPrompt.query.get(system_prompt_id)
+                system_message = selected_system_prompt.content if selected_system_prompt else "You are a helpful AI assistant."
+            else:
+                system_message = "You are a helpful AI assistant."
+
+            # Hinzufügen der Systemnachricht und des Kontexts
+            messages.insert(0, {"role": "system", "content": system_message})
+            if context:
+                messages.append({"role": "system", "content": f"Relevant context: {context}"})
+
+            # Generieren der Antwort mit der vollständigen Chathistorie
+            response = azure_openai_client.chat.completions.create(
+                model=AZURE_MODEL,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=800,
+            )
+            generated_text = response.choices[0].message.content
+
+            # Speichern der Assistentenantwort
+            assistant_message = ChatMessage(session_id=session_id, role='assistant', content=generated_text)
+            db.session.add(assistant_message)
+
+            db.session.commit()
+
+            return jsonify({
+                'message': generated_text,
+                'citations': citations,
+                'session_id': session_id
+            })
+
+        except Exception as e:
+            logging.error(f"Error in chat: {str(e)}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
+
+    # GET request
+    try:
+        collections = chroma_client.list_collections()
+        system_prompts = SystemPrompt.query.all()
+        chat_sessions = ChatSession.query.order_by(ChatSession.updated_at.desc()).limit(10).all()
+
+        return render_template('chat.html',
+                               collections=collections,
+                               chat_sessions=chat_sessions,
+                               labels=labels,
+                               system_prompts=system_prompts)
+    except Exception as e:
+        logging.error(f"Error in GET request: {str(e)}", exc_info=True)
+        return jsonify({'error': 'An error occurred while loading the page'}), 500
+
+
+@app.route('/chat_history/<int:session_id>', methods=['GET'])
+@login_required
+def chat_history(session_id):
+    chat_session = ChatSession.query.get_or_404(session_id)
+    messages = [{'role': msg.role, 'content': msg.content} for msg in chat_session.messages]
+    return jsonify(messages)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

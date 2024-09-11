@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}{{ labels.chat.title }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-center items-start py-4 px-2 min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div class="flex w-full max-w-7xl space-x-4">
+        <!-- Left Column -->
+        <div class="w-1/4 bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+            <div class="h-[700px] overflow-y-auto p-4">
+                <!-- Avatar and Introduction -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm p-4 mb-4">
+                    <div class="w-24 h-24 mx-auto mb-4">
+                        <img src="{{ url_for('static', filename='avatar.png') }}" alt="AI Assistant Avatar" class="w-full h-full object-cover rounded-full">
+                    </div>
+                    <p class="text-center text-sm text-gray-600 dark:text-gray-300">{{ labels.chat.introduction }}</p>
+                </div>
+                <!-- Collection and System Prompt Selection -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm p-4">
+                    <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-2">{{ labels.chat.collection_select }}</h3>
+                    <select id="collection_name" class="w-full p-2 mb-4 border rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600">
+                        <option value="">{{ labels.chat.select_collection }}</option>
+                        {% for collection in collections %}
+                            <option value="{{ collection.name }}">{{ collection.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-2">{{ labels.chat.system_prompt_select }}</h3>
+                    <select id="system_prompt_id" class="w-full p-2 border rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600">
+                        <option value="">{{ labels.chat.select_system_prompt }}</option>
+                        {% for prompt in system_prompts %}
+                            <option value="{{ prompt.id }}">{{ prompt.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Column: Chat Area -->
+        <div class="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden flex flex-col">
+            <div id="chatHistory" class="h-[700px] overflow-y-auto p-4">
+                <!-- Chat messages will be added here dynamically -->
+            </div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-700">
+                <form id="chatForm" class="flex">
+                    <input type="text" id="userInput" class="flex-grow mr-2 p-2 border rounded-lg dark:bg-gray-600 dark:text-white" placeholder="{{ labels.chat.input_placeholder }}">
+                    <button type="submit" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg transition-colors">{{ labels.chat.send_button }}</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Session History -->
+        <div class="w-1/4 bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+            <div class="h-[800px] overflow-y-auto p-4 flex flex-col">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">{{ labels.chat.session_history }}</h3>
+                <div class="flex-grow overflow-y-auto mb-4">
+                    <ul id="sessionHistory" class="space-y-2">
+                        <!-- Session list will be dynamically updated here -->
+                    </ul>
+                </div>
+                <button id="newSessionButton" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 px-4 py-2 rounded-lg flex items-center justify-center transition-colors mt-auto">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    {{ labels.chat.new_session }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatForm = document.getElementById('chatForm');
+    const userInput = document.getElementById('userInput');
+    const chatHistory = document.getElementById('chatHistory');
+    const collectionSelect = document.getElementById('collection_name');
+    const systemPromptSelect = document.getElementById('system_prompt_id');
+    const newSessionButton = document.getElementById('newSessionButton');
+    const sessionHistory = document.getElementById('sessionHistory');
+
+    let sessionId = localStorage.getItem('chatSessionId');
+
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const message = userInput.value.trim();
+        if (message) {
+            addMessage('user', message);
+            sendMessage(message);
+            userInput.value = '';
+        }
+    });
+
+    function sendMessage(message) {
+        addLoadingSpinner();
+        fetch('/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message,
+                collection_name: collectionSelect.value,
+                system_prompt_id: systemPromptSelect.value,
+                session_id: sessionId
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            removeLoadingSpinner();
+            if (data.error) {
+                addMessage('assistant', `Error: ${data.error}`);
+            } else {
+                if (data.session_id && !sessionId) {
+                    sessionId = data.session_id;
+                    localStorage.setItem('chatSessionId', sessionId);
+                }
+                addMessage('assistant', data.message);
+            }
+        })
+        .catch((error) => {
+            removeLoadingSpinner();
+            console.error('Error:', error);
+            addMessage('assistant', '{{ labels.chat.error_message }}');
+        });
+    }
+
+    function addLoadingSpinner() {
+        const spinnerDiv = document.createElement('div');
+        spinnerDiv.id = 'loadingSpinner';
+        spinnerDiv.className = 'flex items-center space-x-2 mb-4';
+        spinnerDiv.innerHTML = `
+            <div class="flex-shrink-0 mr-3">
+                <img src="{{ url_for('static', filename='avatar.png') }}" class="h-8 w-8 rounded-full" alt="AI Avatar">
+            </div>
+            <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div>
+            <span class="text-gray-500 dark:text-gray-400">{{ labels.chat.thinking }}</span>
+        `;
+        chatHistory.appendChild(spinnerDiv);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    function removeLoadingSpinner() {
+        const spinner = document.getElementById('loadingSpinner');
+        if (spinner) {
+            spinner.remove();
+        }
+    }
+
+    function addMessage(sender, content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `mb-4 flex ${sender === 'user' ? 'justify-end' : 'items-start'}`;
+
+        if (sender === 'assistant') {
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'flex-shrink-0 mr-3';
+            const avatarImg = document.createElement('img');
+            avatarImg.src = "{{ url_for('static', filename='avatar.png') }}";
+            avatarImg.className = 'h-8 w-8 rounded-full';
+            avatarImg.alt = 'AI Avatar';
+            avatarDiv.appendChild(avatarImg);
+            messageDiv.appendChild(avatarDiv);
+        }
+
+        const messageBubble = document.createElement('div');
+        messageBubble.className = `inline-block p-3 rounded-lg ${sender === 'user' ? 'bg-primary-100 dark:bg-primary-900' : 'bg-gray-200 dark:bg-gray-600'}`;
+
+        const messageContent = document.createElement('div');
+        messageContent.className = 'prose dark:prose-invert max-w-none';
+        if (sender === 'assistant') {
+            const htmlContent = DOMPurify.sanitize(marked.parse(content));
+            messageContent.innerHTML = htmlContent;
+        } else {
+            messageContent.textContent = content;
+        }
+        messageBubble.appendChild(messageContent);
+
+        messageDiv.appendChild(messageBubble);
+        chatHistory.appendChild(messageDiv);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    function addSessionToList(sessionId, timestamp) {
+        const li = document.createElement('li');
+        li.className = 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded';
+        li.dataset.sessionId = sessionId;
+        li.textContent = `Session ${sessionId} - ${timestamp}`;
+        sessionHistory.insertBefore(li, sessionHistory.firstChild);
+    }
+
+    newSessionButton.addEventListener('click', function() {
+        sessionId = null;
+        localStorage.removeItem('chatSessionId');
+        chatHistory.innerHTML = '';
+
+        // Create a new session
+        fetch('/create_new_session', {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {
+            sessionId = data.session_id;
+            localStorage.setItem('chatSessionId', sessionId);
+            const timestamp = new Date().toLocaleString();
+            addSessionToList(sessionId, timestamp);
+        })
+        .catch(error => console.error('Error creating new session:', error));
+    });
+
+    sessionHistory.addEventListener('click', function(e) {
+        if (e.target.tagName === 'LI') {
+            const clickedSessionId = e.target.dataset.sessionId;
+            sessionId = clickedSessionId;
+            localStorage.setItem('chatSessionId', sessionId);
+            loadChatHistory(sessionId);
+        }
+    });
+
+    function loadChatHistory(sessionId) {
+        fetch(`/chat_history/${sessionId}`)
+            .then(response => response.json())
+            .then(messages => {
+                chatHistory.innerHTML = '';
+                messages.forEach(msg => addMessage(msg.role, msg.content));
+            })
+            .catch(error => console.error('Error loading chat history:', error));
+    }
+
+    function updateSessionList() {
+        fetch('/get_sessions')
+            .then(response => response.json())
+            .then(data => {
+                sessionHistory.innerHTML = '';
+                data.sessions.forEach(session => {
+                    addSessionToList(session.id, new Date(session.created_at).toLocaleString());
+                });
+            })
+            .catch(error => console.error('Error updating session list:', error));
+    }
+
+    // Update session list every 30 seconds
+    setInterval(updateSessionList, 30000);
+
+    // Initial update
+    updateSessionList();
+
+    // Initialisieren der Session beim Laden der Seite
+    if (!sessionId) {
+        fetch('/create_new_session', {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {
+            sessionId = data.session_id;
+            localStorage.setItem('chatSessionId', sessionId);
+            const timestamp = new Date().toLocaleString();
+            addSessionToList(sessionId, timestamp);
+        })
+        .catch(error => console.error('Error creating new session:', error));
+    } else {
+        loadChatHistory(sessionId);
+    }
+});
+</script>
+{% endblock %}

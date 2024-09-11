@@ -1,0 +1,117 @@
+{
+"base": {
+"title": "Musterfirma GmbH",
+"logo": {
+"path": "/static/logo_luxx.png",
+"alt": ""
+},
+"favicon": {
+"path": "/static/favicon_luxx.png"
+}
+},
+"nav": {
+"back_to_main": "Zurück zur Hauptseite",
+"dashboard": "Dashboard",
+"logout": "Logout",
+"login": "Login"
+},
+"requirements": {
+"title": "Ausschreibungsanforderungen",
+"text_length": {
+"label": "Länge des Textes:",
+"short": "Kurz",
+"medium": "Mittel",
+"long": "Lang"
+},
+"tone": {
+"label": "Tonalität:",
+"professional": "Professionell",
+"binding": "Verbindlich",
+"casual": "Locker"
+},
+"text_basis": {
+"label": "Textbasis:*",
+"placeholder": "Bitte Textbasis wählen..."
+},
+"system_prompt": {
+"label": "Rolle:"
+},
+"prompt": {
+"label": "Deine Frage:",
+"placeholder": "Gib hier deine Frage ein..."
+},
+"generate_button": "CAS-Angebotstext generieren"
+},
+"bidder_text": {
+"title": "Bietertext",
+"placeholder": "Hier wird der generierte Bietertext angezeigt.",
+"copy_button": "Kopieren"
+},
+"sources": {
+"title": "Quellen",
+"placeholder": "Hier werden die Quellen des Textes referenziert."
+},
+"history": {
+"title": "Bietertexte Verlauf",
+"requirement": "Anforderung:",
+"bidder_text": "Bietertext:"
+},
+"modal": {
+"title": "Vollständiger Bietertext",
+"copy_button": "Kopieren",
+"close_button": "Schließen"
+},
+"dashboard": {
+"new_text_basis": {
+"title": "Neue Textbasis anlegen",
+"name_label": "Textbasis Name",
+"files_label": "PDF-Dateien",
+"create_button": "Textbasis erstellen",
+"message": "Nachricht"
+},
+"existing_text_bases": {
+"title": "Bestehende Textbasen"
+},
+"quick_actions": {
+"title": "Quick-Actions",
+"delete_history": "Chatverlauf löschen"
+},
+"modal": {
+"title": "Collection Details",
+"delete_button": "Collection löschen",
+"close_button": "Schließen"
+},
+"system_prompts": {
+"title": "Rollen",
+"add_button": "Neue Rolle hinzufügen"
+},
+"sharepoint_import": {
+"title": "SharePoint-Verzeichnis importieren",
+"name_label": "Name der neuen Textbasis",
+"url_label": "SharePoint-URL",
+"import_button": "Importieren"
+}
+},
+"maintenance": {
+"title": "Wartungsmodus",
+"message": "Unsere Website wird derzeit gewartet. Wir sind bald wieder für Sie da!",
+"apology": "Wir entschuldigen uns für eventuelle Unannehmlichkeiten und danken Ihnen für Ihre Geduld."
+},
+"chat": {
+"title": "Chat Interface",
+"introduction": "Hey, mein Name ist Pip! Du hast Fragen im Rahmen deiner Einarbeitung? Dann frag mich einfach und ich werde dir bestmöglich weiterhelfen!",
+"input_placeholder": "Geben Sie Ihre Nachricht ein...",
+"send_button": "Senden",
+"session_history": "Chat-Verlauf",
+"copy_message": "Nachricht kopiert!",
+"sources": "Quellen",
+"collection_select": "Dein Bereich",
+"select_collection": "Bereich...",
+"system_prompt_select": "Deine Funktion",
+"select_system_prompt": "Funktion...",
+"error_message": "Entschuldigung, es ist ein Fehler bei der Verarbeitung Ihrer Nachricht aufgetreten.",
+"copy_tooltip": "Nachricht kopieren",
+"sources_tooltip": "Quellen anzeigen/ausblenden",
+"thinking": "Mh, lass mich kurz überlegen..."
+}
+}
