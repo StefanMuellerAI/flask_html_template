@@ -11,6 +11,7 @@ from vector import (clean_collection_name, process_pdf_and_add_to_collection, cr
 import os
 import ollama
 import json
+import tempfile
 
 # Konfiguriere Logging
 logging.basicConfig(level=logging.DEBUG)
@@ -39,6 +40,7 @@ ALLOWED_EXTENSIONS = {'pdf'}
 AZURE_EMBEDDING_MODEL = os.getenv("AZURE_EMBEDDING_MODEL")
 AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
 AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT")
+AZURE_API_VERSION = os.getenv("AZURE_API_VERSION")
 AZURE_MODEL = os.getenv("AZURE_MODEL", "gpt-35-turbo")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3-gradient:latest")
 LABEL_OWNER = os.getenv("LABLE_OWNER", "labels_arvato.json")
@@ -46,9 +48,10 @@ LABEL_OWNER = os.getenv("LABLE_OWNER", "labels_arvato.json")
 # Initialisiere Azure OpenAI Client
 azure_openai_client = AzureOpenAI(
     api_key=AZURE_OPENAI_KEY,
-    api_version="2024-02-15-preview",
+    api_version=AZURE_API_VERSION,
     azure_endpoint=AZURE_ENDPOINT
 )
+
 
 # Definiere Datenbankmodelle
 class User(UserMixin, db.Model):
@@ -56,10 +59,12 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
 
+
 class Collection(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
+
 
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -67,12 +72,14 @@ class File(db.Model):
     collection_id = db.Column(db.Integer, db.ForeignKey('collection.id'), nullable=False)
     collection = db.relationship('Collection', backref=db.backref('files', lazy=True))
 
+
 class SystemPrompt(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     updated_at = db.Column(db.DateTime(timezone=True), onupdate=func.now())
+
 
 class Conversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -82,10 +89,12 @@ class Conversation(db.Model):
     system_prompt = db.relationship('SystemPrompt', backref=db.backref('conversations', lazy=True))
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
 
+
 class ChatSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     updated_at = db.Column(db.DateTime(timezone=True), onupdate=func.now())
+
 
 class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -97,19 +106,28 @@ class ChatMessage(db.Model):
     session = db.relationship('ChatSession',
                               backref=db.backref('messages', lazy=True, order_by='ChatMessage.created_at'))
 
+
 # Initialisiere Wartungsmodus-Variable
 maintenance_mode = False
+
+
+def load_options():
+    with open('config/options.json', 'r', encoding='utf-8') as f:
+        return json.load(f)
+
 
 # Füge Labels zum Template-Kontext hinzu
 @app.context_processor
 def inject_labels():
     return dict(labels=load_labels())
 
+
 # Lade Labels aus JSON-Datei
 def load_labels():
     label_name = "labels_" + os.getenv("LABEL_OWNER", "") + ".json"
     with open(label_name, 'r', encoding='utf-8') as file:
         return json.load(file)
+
 
 # Funktion zur Textgenerierung (Azure oder Ollama)
 def generate_text(service, system_message, user_message):
@@ -134,12 +152,14 @@ def generate_text(service, system_message, user_message):
         ])
         return response['message']['content']
 
+
 # Route zum Auflisten der System-Prompts
 @app.route('/system_prompts', methods=['GET'])
 @login_required
 def list_system_prompts():
     prompts = SystemPrompt.query.all()
     return jsonify([{'id': p.id, 'name': p.name, 'content': p.content} for p in prompts])
+
 
 # Route zum Erstellen eines neuen System-Prompts
 @app.route('/system_prompts', methods=['POST'])
@@ -150,6 +170,7 @@ def create_system_prompt():
     db.session.add(new_prompt)
     db.session.commit()
     return jsonify({'id': new_prompt.id, 'name': new_prompt.name, 'content': new_prompt.content}), 201
+
 
 # Route zum Abrufen oder Aktualisieren eines System-Prompts
 @app.route('/system_prompts/<int:prompt_id>', methods=['GET', 'PUT'])
@@ -167,6 +188,7 @@ def system_prompt(prompt_id):
         db.session.commit()
         return jsonify({'id': prompt.id, 'name': prompt.name, 'content': prompt.content})
 
+
 # Route zum Löschen eines System-Prompts
 @app.route('/system_prompts/<int:prompt_id>', methods=['DELETE'])
 @login_required
@@ -175,6 +197,7 @@ def delete_system_prompt(prompt_id):
     db.session.delete(prompt)
     db.session.commit()
     return '', 204
+
 
 # Route zum Erstellen einer neuen Kollektion
 @app.route('/create_collection', methods=['POST'])
@@ -234,6 +257,7 @@ def create_collection():
         logging.error(f"An error occurred: {e}")
         return jsonify({"error": str(e)}), 500
 
+
 # Route zum Löschen einer Kollektion
 @app.route('/delete_collection/<collection_name>', methods=['POST'])
 @login_required
@@ -244,16 +268,19 @@ def delete_collection(collection_name):
     except Exception as e:
         return jsonify({'message': f'Fehler beim Löschen der Collection: {str(e)}'}), 500
 
+
 # Lade Benutzer für Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
 
 # Route zum Abrufen des Wartungsmodus-Status
 @app.route('/get_maintenance_status')
 @login_required
 def get_maintenance_status():
     return jsonify({'maintenance_mode': maintenance_mode})
+
 
 # Hauptroute für die Anwendung
 @app.route('/', methods=['GET', 'POST'])
@@ -262,6 +289,7 @@ def index():
     global maintenance_mode
     labels = load_labels()
     system_prompts = SystemPrompt.query.all()
+    options = load_options()  # Optionen laden
 
     if maintenance_mode and request.method == 'GET':
         return render_template('maintenance.html', labels=labels)
@@ -272,10 +300,11 @@ def index():
             form_data = request.form
             prompt = form_data.get('prompt')
             collection_name = form_data.get('collection_name')
-            length = form_data.get('length', 'mittel')
+            length = form_data.get('text_length', 'mittel')
             tone = form_data.get('tone', 'professionell')
             service = form_data.get('service', 'azure')
             system_prompt_id = form_data.get('system_prompt_id')
+            formality = form_data.get('formality', 'formal')
 
             logging.info(f"Received form data: {form_data}")
 
@@ -297,7 +326,13 @@ def index():
             selected_system_prompt = SystemPrompt.query.get(system_prompt_id)
             system_message = selected_system_prompt.content if selected_system_prompt else "You are a helpful AI assistant."
 
-            user_message = f"Use this context if it's helpful: {context}\n\nNow, respond in german to the following prompt: {prompt}\nKeep the text {length} and stick to this tone of voice for the text: {tone}."
+            user_message = f"""
+Use this context if it's helpful: {context}
+
+Now, respond in German to the following prompt: {prompt}
+
+Keep the text {length}, stick to this tone of voice: {tone}, and use a {formality} level of formality.
+""".strip()
 
             # Generiere Text basierend auf dem Prompt und Kontext
             generated_text = generate_text(service, system_message, user_message)
@@ -340,10 +375,12 @@ def index():
                                selected_service='azure',
                                maintenance_mode=maintenance_mode,
                                labels=labels,
-                               system_prompts=system_prompts)
+                               system_prompts=system_prompts,
+                               options=options)  # Optionen an das Template übergeben
     except Exception as e:
         logging.error(f"Error in GET request: {str(e)}", exc_info=True)
         return jsonify({'error': 'An error occurred while loading the page'}), 500
+
 
 # Neue Route zum Umschalten des Wartungsmodus
 @app.route('/toggle_maintenance', methods=['POST'])
@@ -353,9 +390,11 @@ def toggle_maintenance():
     maintenance_mode = not maintenance_mode
     return jsonify({'status': 'success', 'maintenance': maintenance_mode})
 
+
 @app.route('/maintenance_status')
 def maintenance_status():
     return jsonify({'maintenance': maintenance_mode})
+
 
 @app.route('/clear_chat_history', methods=['POST'])
 @login_required
@@ -367,6 +406,7 @@ def clear_chat_history():
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': f'Fehler beim Löschen des Chatverlaufs: {str(e)}'}), 500
+
 
 @app.route('/list_collections')
 @login_required
@@ -397,6 +437,7 @@ def list_collections():
 
     return jsonify({'collections': collection_data})
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -409,16 +450,19 @@ def login():
         flash('Invalid username or password')
     return render_template('login.html')
 
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('index'))
 
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
     return render_template('dashboard.html')
+
 
 @app.route('/create_new_session', methods=['POST'])
 @login_required
@@ -428,6 +472,7 @@ def create_new_session():
     db.session.commit()
     return jsonify({'session_id': new_session.id})
 
+
 @app.route('/get_sessions')
 @login_required
 def get_sessions():
@@ -435,6 +480,7 @@ def get_sessions():
     return jsonify({
         'sessions': [{'id': session.id, 'created_at': session.created_at.isoformat()} for session in sessions]
     })
+
 
 @app.route('/chat', methods=['GET', 'POST'])
 @login_required
@@ -549,8 +595,11 @@ def chat_history(session_id):
     messages = [{'role': msg.role, 'content': msg.content} for msg in chat_session.messages]
     return jsonify(messages)
 
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 
 
 

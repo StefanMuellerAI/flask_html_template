@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } catch (err) {
                 console.error('Fehler beim Kopieren des Textes: ', err);
-                button.textContent = 'Fehler beim Kopieren';
+                button.textContent = 'Fehler beim Kopieren!';
                 button.className = originalClasses.replace('bg-blue-500 hover:bg-blue-700', 'bg-red-500 hover:bg-red-700');
             }
 
