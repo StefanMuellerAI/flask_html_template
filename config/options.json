@@ -1,0 +1,16 @@
+{
+    "text_lengths": [
+        {"value": "kurz", "label": "Kurz"},
+        {"value": "mittel", "label": "Mittel"},
+        {"value": "lang", "label": "Lang"}
+    ],
+    "tones": [
+        {"value": "professionell", "label": "Professionell"},
+        {"value": "verbindlich", "label": "Verbindlich"},
+        {"value": "locker", "label": "Locker"}
+    ],
+    "formality_levels": [
+        {"value": "formal", "label": "Formell"},
+        {"value": "informal", "label": "Informell"}
+    ]
+}

@@ -5,39 +5,42 @@
     <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md overflow-y-auto h-[800px]">
         <h2 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-200">{{ labels.requirements.title }}</h2>
         <form id="inputForm">
+            <!-- Textlängen-Optionen -->
             <div class="mb-6">
                 <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-2">{{ labels.requirements.text_length.label }}</h3>
                 <div class="space-y-2">
-                    <label class="inline-flex items-center">
-                        <input type="radio" class="form-radio" name="text_length" value="short">
-                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.text_length.short }}</span>
-                    </label>
-                    <label class="inline-flex items-center">
-                        <input type="radio" class="form-radio" name="text_length" value="medium" checked>
-                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.text_length.medium }}</span>
-                    </label>
-                    <label class="inline-flex items-center">
-                        <input type="radio" class="form-radio" name="text_length" value="long">
-                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.text_length.long }}</span>
-                    </label>
+                    {% for length_option in options.text_lengths %}
+                        <label class="inline-flex items-center">
+                            <input type="radio" class="form-radio" name="text_length" value="{{ length_option.value }}" {% if length_option.value == 'mittel' %}checked{% endif %}>
+                            <span class="ml-2 text-gray-700 dark:text-gray-300">{{ length_option.label }}</span>
+                        </label>
+                    {% endfor %}
                 </div>
             </div>
 
+            <!-- Tonalitäts-Optionen -->
             <div class="mb-6">
                 <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-2">{{ labels.requirements.tone.label }}</h3>
                 <div class="space-y-2">
-                    <label class="inline-flex items-center">
-                        <input type="radio" class="form-radio" name="tone" value="professional" checked>
-                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.tone.professional }}</span>
-                    </label>
-                    <label class="inline-flex items-center">
-                        <input type="radio" class="form-radio" name="tone" value="binding">
-                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.tone.binding }}</span>
-                    </label>
-                    <label class="inline-flex items-center">
-                        <input type="radio" class="form-radio" name="tone" value="casual">
-                        <span class="ml-2 text-gray-700 dark:text-gray-300">{{ labels.requirements.tone.casual }}</span>
-                    </label>
+                    {% for tone_option in options.tones %}
+                        <label class="inline-flex items-center">
+                            <input type="radio" class="form-radio" name="tone" value="{{ tone_option.value }}" {% if tone_option.value == 'professionell' %}checked{% endif %}>
+                            <span class="ml-2 text-gray-700 dark:text-gray-300">{{ tone_option.label }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Formalitäts-Optionen -->
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 dark:text-gray-300 mb-2">Formalität</h3>
+                <div class="space-y-2">
+                    {% for formality_option in options.formality_levels %}
+                        <label class="inline-flex items-center">
+                            <input type="radio" class="form-radio" name="formality" value="{{ formality_option.value }}" {% if loop.first %}checked{% endif %}>
+                            <span class="ml-2 text-gray-700 dark:text-gray-300">{{ formality_option.label }}</span>
+                        </label>
+                    {% endfor %}
                 </div>
             </div>
 

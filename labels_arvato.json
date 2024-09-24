@@ -40,7 +40,7 @@
 "label": "Deine Frage:",
 "placeholder": "Gib hier deine Frage ein..."
 },
-"generate_button": "CAS-Angebotstext generieren"
+"generate_button": "Text generieren"
 },
 "bidder_text": {
 "title": "Bietertext",
@@ -86,10 +86,12 @@
 "add_button": "Neue Rolle hinzufügen"
 },
 "sharepoint_import": {
-"title": "SharePoint-Verzeichnis importieren",
-"name_label": "Name der neuen Textbasis",
-"url_label": "SharePoint-URL",
-"import_button": "Importieren"
+"title": "SharePoint Import",
+"url_label": "SharePoint URL",
+"collection_name_label": "Kollektionsname",
+"import_button": "Importieren",
+"success_message": "Erfolgreich {0} Dateien aus SharePoint in die Kollektion '{1}' importiert",
+"error_message": "Fehler beim Import: {0}"
 }
 },
 "maintenance": {
